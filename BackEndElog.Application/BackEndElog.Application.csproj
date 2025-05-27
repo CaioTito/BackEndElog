@@ -1,6 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <PackageReference Include="FluentValidation" Version="12.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\BackEndElog.Infrastructure\BackEndElog.Infrastructure.csproj" />
     <ProjectReference Include="..\BackEndElog.Domain\BackEndElog.Domain.csproj" />
     <ProjectReference Include="..\BackEndElog.Shared\BackEndElog.Shared.csproj" />

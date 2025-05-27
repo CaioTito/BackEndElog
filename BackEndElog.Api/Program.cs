@@ -1,14 +1,15 @@
 using BackEndElog.Application.Queries;
+using BackEndElog.Application.Validators;
 using BackEndElog.Infrastructure.ExternalServices;
 using BackEndElog.Infrastructure.Interfaces;
 using BackEndElog.Shared.Configurations;
+using FluentValidation;
 using Microsoft.Extensions.Options;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configuração dos Controllers com System.Text.Json
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
@@ -16,6 +17,8 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
         options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
     });
+
+builder.Services.AddValidatorsFromAssemblyContaining<GetOdometerQueryValidator>();
 
 // Swagger
 builder.Services.AddEndpointsApiExplorer();
@@ -51,7 +54,6 @@ builder.Services.AddHttpClient("ElogClient", (provider, client) =>
 
 var app = builder.Build();
 
-// Middlewares
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();

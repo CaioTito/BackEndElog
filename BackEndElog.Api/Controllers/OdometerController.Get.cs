@@ -1,4 +1,5 @@
-﻿using BackEndElog.Application.Queries;
+﻿using BackEndElog.Api.Extensions;
+using BackEndElog.Application.Queries;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BackEndElog.Api.Controllers;
@@ -13,12 +14,6 @@ public class OdometerController(GetOdometerQueryHandler handler) : ControllerBas
     public async Task<IActionResult> Get([FromQuery] GetOdometerQuery query)
     {
         var result = await _handler.HandleAsync(query);
-        if (result.IsSuccess)
-        {
-            return Ok(result.Value);
-        }
-
-        var statusCode = result.Error?.Code ?? 400;
-        return StatusCode(statusCode, new { error = result.Error?.Description });
+        return result.ToActionResult();
     }
 }

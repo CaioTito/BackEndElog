@@ -13,6 +13,37 @@ namespace BackEndElog.Tests.Infraestructure.ExternalServices;
 
 public class OdometerServiceTests
 {
+    private readonly Mock<HttpMessageHandler> _mockHttpHandler;
+    private readonly Mock<IHttpClientFactory> _mockHttpClientFactory;
+    private readonly Mock<IOptions<ElogApiSettings>> _mockOptions;
+    private readonly Mock<ILogger<OdometerService>> _mockLogger;
+    private readonly OdometerService _service;
+
+    public OdometerServiceTests()
+    {
+        _mockHttpHandler = new Mock<HttpMessageHandler>();
+
+        var httpClient = new HttpClient(_mockHttpHandler.Object)
+        {
+            BaseAddress = new Uri("https://api-elog-client.azurewebsites.net/api/v1/")
+        };
+
+        _mockHttpClientFactory = new Mock<IHttpClientFactory>();
+        _mockHttpClientFactory
+            .Setup(f => f.CreateClient(It.IsAny<string>()))
+            .Returns(httpClient);
+
+        _mockOptions = new Mock<IOptions<ElogApiSettings>>();
+        _mockOptions.Setup(o => o.Value).Returns(new ElogApiSettings
+        {
+            OdometerPath = "Vehicles/TrackerOdometer"
+        });
+
+        _mockLogger = new Mock<ILogger<OdometerService>>();
+
+        _service = new OdometerService(_mockHttpClientFactory.Object, _mockOptions.Object, _mockLogger.Object);
+    }
+
     [Fact]
     public async Task GetOdometerDataAsync_ReturnsValidData()
     {
@@ -23,8 +54,7 @@ public class OdometerServiceTests
             Data = new List<OdometerItemDto>()
         };
 
-        var mockHttpHandler = new Mock<HttpMessageHandler>();
-        mockHttpHandler.Protected()
+        _mockHttpHandler.Protected()
             .Setup<Task<HttpResponseMessage>>(
                 "SendAsync",
                 ItExpr.IsAny<HttpRequestMessage>(),
@@ -35,24 +65,6 @@ public class OdometerServiceTests
                 Content = new StringContent(JsonSerializer.Serialize(expectedDto))
             });
 
-        var httpClient = new HttpClient(mockHttpHandler.Object)
-        {
-            BaseAddress = new Uri("https://api-elog-client.azurewebsites.net/api/v1/")
-        };
-
-        var factoryMock = new Mock<IHttpClientFactory>();
-        factoryMock.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(httpClient);
-
-        var mockOptions = new Mock<IOptions<ElogApiSettings>>();
-        mockOptions.Setup(o => o.Value).Returns(new ElogApiSettings
-        {
-            OdometerPath = "Vehicles/TrackerOdometer"
-        });
-
-        var loggerMock = new Mock<ILogger<OdometerService>>();
-
-        var service = new OdometerService(factoryMock.Object, mockOptions.Object, loggerMock.Object);
-
         var query = new OdometerQueryDto
         {
             StartDate = DateTime.UtcNow.AddDays(-2),
@@ -60,7 +72,7 @@ public class OdometerServiceTests
         };
 
         // Act
-        var result = await service.GetOdometerDataAsync(query);
+        var result = await _service.GetOdometerDataAsync(query);
 
         // Assert
         Assert.NotNull(result);
