@@ -1,6 +1,7 @@
-﻿using BackEndElog.Shared.Configurations;
+﻿using BackEndElog.Infrastructure.ExternalServices;
+using BackEndElog.Shared.Configurations;
 using BackEndElog.Shared.DTOs;
-using BackEndElog.Infrastructure.ExternalServices;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using Moq.Protected;
@@ -48,7 +49,9 @@ public class OdometerServiceTests
             OdometerPath = "Vehicles/TrackerOdometer"
         });
 
-        var service = new OdometerService(factoryMock.Object, mockOptions.Object);
+        var loggerMock = new Mock<ILogger<OdometerService>>();
+
+        var service = new OdometerService(factoryMock.Object, mockOptions.Object, loggerMock.Object);
 
         var query = new OdometerQueryDto
         {
@@ -61,6 +64,6 @@ public class OdometerServiceTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(1, result.TotalItems);
+        Assert.Equal(1, result.Value.TotalItems);
     }
 }

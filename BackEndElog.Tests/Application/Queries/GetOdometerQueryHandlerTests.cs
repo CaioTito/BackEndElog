@@ -3,6 +3,7 @@ using BackEndElog.Shared.DTOs;
 using BackEndElog.Application.Queries;
 using Moq;
 using Xunit;
+using BackEndElog.Shared.Results;
 
 namespace BackEndElog.Tests.Application.Queries;
 
@@ -26,14 +27,14 @@ public class GetOdometerQueryHandlerTests
             Page = 1
         };
 
-        var expectedResult = new OdometerResultDto
+        var expectedResult = Result<OdometerResultDto>.Success(new OdometerResultDto
         {
             TotalItems = 1,
             NumberOfRowPage = 10,
             PageActive = 1,
             TotalPages = 1,
             Data = new List<OdometerItemDto>()
-        };
+        });
 
         mockService
             .Setup(s => s.GetOdometerDataAsync(It.IsAny<OdometerQueryDto>()))
@@ -44,6 +45,6 @@ public class GetOdometerQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(1, result.TotalItems);
+        Assert.Equal(1, result.Value.TotalItems);
     }
 }

@@ -1,11 +1,12 @@
 ﻿using BackEndElog.Infrastructure.Interfaces;
 using BackEndElog.Shared.DTOs;
+using BackEndElog.Shared.Results;
 
 namespace BackEndElog.Application.Queries;
 
 public class GetOdometerQueryHandler(IOdometerService service)
 {
-    public async Task<OdometerResultDto?> HandleAsync(GetOdometerQuery query)
+    public async Task<Result<OdometerResultDto?>> HandleAsync(GetOdometerQuery query)
     {
         var dto = new OdometerQueryDto
         {

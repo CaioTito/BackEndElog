@@ -13,6 +13,12 @@ public class OdometerController(GetOdometerQueryHandler handler) : ControllerBas
     public async Task<IActionResult> Get([FromQuery] GetOdometerQuery query)
     {
         var result = await _handler.HandleAsync(query);
-        return Ok(result);
+        if (result.IsSuccess)
+        {
+            return Ok(result.Value);
+        }
+
+        var statusCode = result.Error?.Code ?? 400;
+        return StatusCode(statusCode, new { error = result.Error?.Description });
     }
 }
