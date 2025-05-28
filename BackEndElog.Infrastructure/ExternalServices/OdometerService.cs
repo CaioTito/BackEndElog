@@ -1,9 +1,12 @@
 ﻿using BackEndElog.Infrastructure.Interfaces;
+using BackEndElog.Infrastructure.Resilience;
 using BackEndElog.Shared.Configurations;
 using BackEndElog.Shared.DTOs;
 using BackEndElog.Shared.Results;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Polly;
+using System.Net;
 using System.Net.Http.Json;
 using System.Web;
 
@@ -14,6 +17,7 @@ public class OdometerService : IOdometerService
     private readonly HttpClient _client;
     private readonly string _odometerPath;
     private readonly ILogger<OdometerService> _logger;
+    private readonly AsyncPolicy<Result<OdometerResultDto?>> _retryPolicy;
 
     public OdometerService(
         IHttpClientFactory factory,
@@ -23,44 +27,40 @@ public class OdometerService : IOdometerService
         _client = factory.CreateClient("ElogClient");
         _odometerPath = options.Value.OdometerPath;
         _logger = logger;
+        _retryPolicy = PolicyFactory.CreateRetryPolicy<OdometerResultDto>(_logger);
     }
 
     public async Task<Result<OdometerResultDto?>> GetOdometerDataAsync(OdometerQueryDto query)
     {
-        try
+        return await _retryPolicy.ExecuteAsync(async (context) =>
         {
-            var requestUri = BuildRequestUri(query);
-            var response = await _client.GetAsync(requestUri);
-
-            response.EnsureSuccessStatusCode();
-
-            var result = await response.Content.ReadFromJsonAsync<OdometerResultDto>();
-
-            if (result == null)
+            try
             {
-                _logger.LogWarning("Resposta nula da API externa.");
-                return Result<OdometerResultDto?>.Failure(new Error(502, "Resposta inválida da API externa."));
+                var requestUri = BuildRequestUri(query);
+                var response = await _client.GetAsync(requestUri);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    return HandleUnsuccessfulResponse(response, context);
+                }
+
+                var result = await response.Content.ReadFromJsonAsync<OdometerResultDto>();
+
+                if (result == null)
+                {
+                    _logger.LogWarning("Resposta nula da API externa.");
+                    return Result<OdometerResultDto?>.Failure(new Error(502, "Resposta inválida da API externa."));
+                }
+
+                return Result<OdometerResultDto?>.Success(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro inesperado em GetOdometerDataAsync: {Message}", ex.Message);
+                return Result<OdometerResultDto?>.Failure(new Error(500, "Erro interno ao processar a requisição."));
             }
 
-            return Result<OdometerResultDto?>.Success(result);
-        }
-        catch (HttpRequestException httpEx)
-        {
-            _logger.LogError(httpEx, "Erro na requisição HTTP: {Message}", httpEx.Message);
-
-            var statusCode = httpEx.StatusCode.HasValue ? (int)httpEx.StatusCode.Value : 502;
-            var description = httpEx.StatusCode.HasValue
-                ? $"Erro HTTP {(int)httpEx.StatusCode.Value} - {httpEx.StatusCode}"
-                : "Erro ao se comunicar com a API externa.";
-
-            return Result<OdometerResultDto?>.Failure(new Error(statusCode, description));
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Erro inesperado em GetOdometerDataAsync: {Message}", ex.Message);
-
-            return Result<OdometerResultDto?>.Failure(new Error(500, "Erro interno ao processar a requisição."));
-        }
+        }, new Context());
     }
 
     private Uri BuildRequestUri(OdometerQueryDto query)
@@ -97,5 +97,27 @@ public class OdometerService : IOdometerService
 
         builder.Query = parameters.ToString();
         return builder.Uri;
+    }
+
+    private static Result<OdometerResultDto?> HandleUnsuccessfulResponse(HttpResponseMessage response, Context context)
+    {
+        if (response.StatusCode == HttpStatusCode.TooManyRequests)
+        {
+            if (response.Headers.TryGetValues("Retry-After", out var values) &&
+                int.TryParse(values.FirstOrDefault(), out var seconds))
+            {
+                context["RetryAfter"] = TimeSpan.FromSeconds(seconds);
+            }
+            else
+            {
+                context["RetryAfter"] = TimeSpan.FromSeconds(5);
+            }
+
+            return Result<OdometerResultDto?>.Failure(new Error(429, "Muitas requisições. Aguarde e tente novamente."));
+        }
+
+        var code = (int)response.StatusCode;
+        var description = $"Erro HTTP {code} - {response.ReasonPhrase}";
+        return Result<OdometerResultDto?>.Failure(new Error(code, description));
     }
 }
