@@ -3,7 +3,6 @@ using BackEndElog.Infrastructure.Interfaces;
 using BackEndElog.Shared.DTOs;
 using BackEndElog.Shared.Results;
 using FluentValidation;
-using System.ComponentModel.DataAnnotations;
 
 namespace BackEndElog.Application.Queries;
 

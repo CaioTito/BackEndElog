@@ -8,19 +8,19 @@ public class GetOdometerQueryValidator : AbstractValidator<GetOdometerQuery>
     public GetOdometerQueryValidator()
     {
         RuleFor(b => b.StartDate)
-            .NotNull().WithMessage("Start Date is required")
-            .LessThanOrEqualTo(DateTime.UtcNow).WithMessage("Start Date cannot be in the future");
+            .NotNull().NotEmpty().WithMessage("Data inicial é obrigatória")
+            .LessThanOrEqualTo(DateTime.Now).WithMessage("Data inicial, não pode ser uma data futura");
 
         RuleFor(b => b.EndDate)
-            .NotNull().WithMessage("End Date is required")
-            .LessThanOrEqualTo(DateTime.UtcNow).WithMessage("End Date cannot be in the future");
+            .NotNull().NotEmpty().WithMessage("Data final é obrigatória")
+            .LessThanOrEqualTo(DateTime.Now).WithMessage("Data final, não pode ser uma data futura");
 
         RuleFor(b => b)
             .Must(b => b.StartDate < b.EndDate)
-            .WithMessage("Start Date must be before End Date");
+            .WithMessage("Data inicial precisa ser anterior a data final");
 
         RuleFor(b => b)
             .Must(b => (b.EndDate - b.StartDate).TotalDays <= 90)
-            .WithMessage("The date range cannot exceed 90 days");
+            .WithMessage("O período máximo entre as datas não deve ultrapassar 90 dias");
     }
 }
