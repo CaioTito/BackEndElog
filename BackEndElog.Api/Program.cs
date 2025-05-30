@@ -42,6 +42,16 @@ builder.Services.AddSwaggerGen(c =>
     c.IncludeXmlComments(xmlPath);
 });
 
+builder.Services.Configure<ElogApiSettings>(options =>
+{
+    builder.Configuration.GetSection("ElogApi").Bind(options);
+    var token = builder.Configuration["AuthorizationToken"];
+    if (!string.IsNullOrWhiteSpace(token))
+    {
+        options.AuthorizationToken = token;
+    }
+});
+
 builder.Services.AddHttpClient("ElogClient", (provider, client) =>
 {
     var elogConfig = provider.GetRequiredService<IOptions<ElogApiSettings>>().Value;
@@ -57,9 +67,6 @@ builder.Services.AddHttpClient("ElogClient", (provider, client) =>
 
 builder.Services.AddScoped<IOdometerService, OdometerService>();
 builder.Services.AddScoped<GetOdometerQueryHandler>();
-
-builder.Services.Configure<ElogApiSettings>(
-    builder.Configuration.GetSection("ElogApi"));
 
 var app = builder.Build();
 

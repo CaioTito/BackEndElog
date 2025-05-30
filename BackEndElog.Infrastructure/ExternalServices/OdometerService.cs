@@ -8,6 +8,7 @@ using Microsoft.Extensions.Options;
 using Polly;
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.RegularExpressions;
 using System.Web;
 
 namespace BackEndElog.Infrastructure.ExternalServices;
@@ -51,6 +52,15 @@ public class OdometerService : IOdometerService
                     _logger.LogWarning("Resposta nula da API externa.");
                     return Result<OdometerResultDto?>.Failure(new Error(502, "Resposta inválida da API externa."));
                 }
+
+                result.Data = result.Data
+                    .Select(item =>
+                    {
+                        if (IsLicensePlate(item.VehicleIdTms))
+                            item.VehicleIdTms = string.Empty;
+                        return item;
+                    })
+                    .ToList();
 
                 return Result<OdometerResultDto?>.Success(result);
             }
@@ -119,5 +129,11 @@ public class OdometerService : IOdometerService
         var code = (int)response.StatusCode;
         var description = $"Erro HTTP {code} - {response.ReasonPhrase}";
         return Result<OdometerResultDto?>.Failure(new Error(code, description));
+    }
+
+    private static bool IsLicensePlate(string input)
+    {
+        return !string.IsNullOrEmpty(input) &&
+               Regex.IsMatch(input, @"^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$", RegexOptions.IgnoreCase);
     }
 }
