@@ -5,6 +5,7 @@ using BackEndElog.Infrastructure.Interfaces;
 using BackEndElog.Shared.Configurations;
 using FluentValidation;
 using Microsoft.Extensions.Options;
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -22,7 +23,24 @@ builder.Services.AddValidatorsFromAssemblyContaining<GetOdometerQueryValidator>(
 
 // Swagger
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    {
+        Title = "Elog API",
+        Version = "v1",
+        Description = "API para obter informações do hodômetro via integração com o sistema Elog.",
+        Contact = new Microsoft.OpenApi.Models.OpenApiContact
+        {
+            Name = "Caio Souza",
+            Email = "caio_tito@hotmail.com",
+        }
+    });
+
+    var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    c.IncludeXmlComments(xmlPath);
+});
 
 builder.Services.AddHttpClient("ElogClient", (provider, client) =>
 {
@@ -42,15 +60,6 @@ builder.Services.AddScoped<GetOdometerQueryHandler>();
 
 builder.Services.Configure<ElogApiSettings>(
     builder.Configuration.GetSection("ElogApi"));
-
-builder.Services.AddHttpClient("ElogClient", (provider, client) =>
-{
-    var config = provider.GetRequiredService<IOptions<ElogApiSettings>>().Value;
-
-    client.BaseAddress = new Uri(config.BaseUrl);
-    client.DefaultRequestHeaders.Authorization =
-        new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", config.AuthorizationToken);
-});
 
 var app = builder.Build();
 

@@ -1,7 +1,13 @@
 ﻿namespace BackEndElog.Application.Queries;
 public class GetOdometerQuery
 {
+    /// <summary>
+    /// Data inicial para consulta.
+    /// </summary>
     public DateTime StartDate { get; set; }
+    /// <summary>
+    /// Data final para consulta.
+    /// </summary>
     public DateTime EndDate { get; set; }
     public List<string>? IdTms { get; set; }
     public List<string>? LicensePlate { get; set; }
